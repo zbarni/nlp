@@ -1,18 +1,19 @@
 #include "dictionary.hh"
 
-//Dict::Dict() : 
-//    {}
-    
 void Dict::insert(std::string w) {
     Trie *t = trie.add(&trie, indexMap.size() + 1, w.c_str());
     if (t) {
         //if (w == "alice")  std::cout << w << std::endl;
-        indexMap.push_back(t);
+        indexMap.insert(std::pair<unsigned, Trie *>(cnt++, t));
     }
 }
 
-std::string Dict::findByIndex(unsigned index) {
-    return trie.find(indexMap[index - 1]);
+std::string Dict::find(unsigned index) {
+    auto it = indexMap.find(index - 1);
+    if (it != indexMap.end()) {
+        return trie.find(it->second);
+    }
+    return "No element with this index.";
 }
 
 unsigned Dict::getIndex(std::string w) {

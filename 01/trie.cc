@@ -35,8 +35,13 @@ int Trie::getPos(const char *w) {
     else return punctuation[*w];
 }
 
+/*
+    Returns a pointer to the leave if insertion was successful,
+    and 0 otherwise (word already in the trie).
+*/
 Trie* Trie::add(Trie *t, int ind, const char *w) {
     if (*w=='\0') {
+        if (t->inf) return 0;
         ++t->inf;
         t->first_indx = ind;
         return t;
