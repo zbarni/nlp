@@ -65,6 +65,7 @@ std::string Trie::find(Trie *t) {
 }
 
 int Trie::findIndex(Trie *t, const char *w) {
+    if (!t) return 0;
     if (*w=='\0') {
         return t->first_indx;
     }
