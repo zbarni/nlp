@@ -3,7 +3,7 @@
 Trie::Trie():
     pred(0),
     first_indx(-1),
-    inf(0),
+    occur(0),
     son(0)
 {
     std::memset(next,0,sizeof(next));
@@ -39,11 +39,13 @@ int Trie::getPos(const char *w) {
     Returns a pointer to the leave if insertion was successful,
     and 0 otherwise (word already in the trie).
 */
-Trie* Trie::add(Trie *t, int ind, const char *w) {
+Trie* Trie::add(Trie *t, int nr, const char *w) {
     if (*w=='\0') {
-        if (t->inf) return 0;
-        ++t->inf;
-        t->first_indx = ind;
+        if (t->occur) {
+            t->occur += nr;
+            return 0;
+        }
+        t->occur += nr;
         return t;
     }
     int pos;
@@ -54,7 +56,7 @@ Trie* Trie::add(Trie *t, int ind, const char *w) {
         t->next[pos]->pred = t;
         t->next[pos]->c = *w;
     }
-    return add(t->next[pos], ind, w+1);
+    return add(t->next[pos], nr, w+1);
 }
 
 std::string Trie::find(Trie *t) {
@@ -64,25 +66,23 @@ std::string Trie::find(Trie *t) {
     return (find(t->pred)) + t->c;
 }
 
-int Trie::findIndex(Trie *t, const char *w) {
-    if (*w=='\0') {
-        return t->first_indx;
+unsigned Trie::getFrequency(Trie *t, const char *w) {
+    if (!t) {
+        return 0; 
     }
-    int pos;
-    pos = getPos(w);
-    return findIndex(t->next[pos], w+1);
+    return (*w=='\0') ? t->occur : getFrequency(t->next[getPos(w)], w+1);
 }
 
 int Trie::del(Trie *T,Trie *t, const char *w)
 {
     int pos = getPos(w);
     if (*w == '\0')
-        --t->inf;
+        --t->occur;
     else if (del(T,t->next[pos],w+1)) {
         t->next[pos]=0;
         --t->son;
     }
-    if (!t->son && !t->inf && t!=T) {
+    if (!t->son && !t->occur && t!=T) {
         delete t;
         return 1;
     }
@@ -92,7 +92,7 @@ int Trie::del(Trie *T,Trie *t, const char *w)
 //int app (trie *t,char *w)
 //{
 //    if (*w=='\0')
-//        return t->inf;
+//        return t->occur;
 //    int pos=*w-'a';
 //    if (t->next[pos])
 //        return app(t->next[pos],w+1);

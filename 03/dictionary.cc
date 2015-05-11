@@ -3,7 +3,13 @@
 void Dict::insert(std::string w) {
     Trie *t = trie.add(&trie, indexMap.size() + 1, w.c_str());
     if (t) {
-        //if (w == "alice")  std::cout << w << std::endl;
+        indexMap.insert(std::pair<unsigned, Trie *>(cnt++, t));
+    }
+}
+
+void Dict::insert(unsigned nr, std::string w) {
+    Trie *t = trie.add(&trie, nr, w.c_str());
+    if (t) {
         indexMap.insert(std::pair<unsigned, Trie *>(cnt++, t));
     }
 }
@@ -16,8 +22,13 @@ std::string Dict::find(unsigned index) {
     return "No element with this index.";
 }
 
-unsigned Dict::getIndex(std::string w) {
-    return trie.findIndex(&trie, w.c_str());
+bool Dict::find(const std::string &w) {
+//    return trie.find(&trie, w) != 0;
+    return getFrequency(w) > 0;
+}
+
+unsigned Dict::getFrequency(std::string w) {
+    return trie.getFrequency(&trie, w.c_str());
 }
 
 void Dict::nMostFreq() {

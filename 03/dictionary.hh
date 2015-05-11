@@ -1,3 +1,6 @@
+#ifndef DICTIONARY_H
+#define DICTIONARY_H
+
 #include <iostream>
 #include <unordered_map>
 #include "trie.hh"
@@ -9,8 +12,10 @@ class Dict {
         ~Dict() {}
 
         void        insert(std::string w);
+        void        insert(unsigned nr, std::string w);
         std::string find(unsigned ind);
-        unsigned    getIndex(std::string w);
+        bool        find(const std::string &w);
+        unsigned    getFrequency(std::string w);
         void        nMostFreq();
         
     private:
@@ -18,3 +23,5 @@ class Dict {
         IndexMap indexMap;
         unsigned long cnt;
 };
+
+#endif // DICTIONARY_H

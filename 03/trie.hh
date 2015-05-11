@@ -1,3 +1,6 @@
+#ifndef TRIE_H
+#define TRIE_H
+
 #include<map>
 #include<vector>
 #include<cstdio>
@@ -13,18 +16,19 @@ class Trie {
         Trie();
         ~Trie() {}
 
-        Trie* add(Trie *t, int ind, const char *c);
+        Trie*   add(Trie *t, int ind, const char *c);
         std::string find(Trie *t);
-        int findIndex(Trie *t, const char *w);
-        int  del(Trie *T,Trie *t,const char *w);
-        int  getPos(const char *w);
+        unsigned getFrequency(Trie *t, const char *w);
+        int     del(Trie *T,Trie *t,const char *w);
+        int     getPos(const char *w);
     private:
 
         Trie *next[TRIE_SIZE];
         Trie *pred;
         char c;
         int first_indx;
-        int inf;
+        int occur;
         int son;
         std::map<char, int> punctuation;
 };
+#endif // TRIE_H
