@@ -1,0 +1,5 @@
+Students: 
+    Robert Lau
+    Barna Zajzon
+
+Make sure that "ngram-count" and "ngram" SRILM binaries are in your PATH.
