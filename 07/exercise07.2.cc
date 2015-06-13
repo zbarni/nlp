@@ -12,13 +12,9 @@
 #define sentenceEndToken    1
 
 using namespace std;
-int N;
 
 double getSentencePerplexity(string &line)
 {
-    init_vocab();                               //from simple_lm
-    init_lm();                                  //from simple_lm
-
     unsigned short currentChar = 2;
     unsigned short prevousChar = 2;             //sentence beginn token
     double perplexity = 0;
@@ -34,9 +30,9 @@ double getSentencePerplexity(string &line)
                 break;
             }
         }
-        perplexity = perplexity + pow(10 ,scores[prevousChar][currentChar]);
+        perplexity = perplexity + pow(10 ,scores[currentChar][prevousChar]);
     }
-    perplexity = perplexity + pow(10 ,scores[currentChar][sentenceEndToken]);
+    perplexity = perplexity + pow(10 ,scores[sentenceEndToken][currentChar]);
     perplexity = pow(perplexity, -(2/((double)line.length())+1));
     return perplexity;
 }
@@ -80,21 +76,108 @@ void partA()
 
 string getRandomSequence(string &line, double lambda)
 {
-    srand (time(NULL));
-    double lambdaRandomCheck;
-    cout << (int)'a' << endl;
-    return line;
+    string randomisedLine;
+
+    for (unsigned i = 0; i < line.length(); i = i + 2)
+    {
+        double lambdaCheckNr = (double)(rand() % 100)/100;
+        if(lambdaCheckNr < lambda)
+        {
+            randomisedLine = randomisedLine + line[i] + " ";
+        } else
+        {
+            char randomChar = (rand() % 25) + (int)'a';
+            if(randomChar == line[i])
+            {
+                randomChar = '_';
+            }
+            randomisedLine = randomisedLine + randomChar + " ";
+        }
+    }
+
+    return randomisedLine;
 }
 
-void partB(){
+double getAccuracy(string &line1, string &line2)
+{
+    if(abs((int)line1.length() - (int)line2.length()) > 1)
+    {
+        return -1;                      //check if both lines are of equal lengh
+    }
+    double accuracy = 0;
+    for (unsigned i = 0; i < line1.length(); i = i + 2)
+    {
+        if(line1[i] == line2[i])
+        {
+            accuracy++;
+        }
+    }
+    return accuracy / ((int)min(line1.length() + 1, line2.length() + 1)/2);
+}
+
+double getPLambdaXnCn(char x, char c, double lambda)
+{
+    if(x == c)
+    {
+        return lambda;
+    } else
+    {
+        return (1 - lambda)/25;         //X is 26(a..z & _)
+    }
+}
+
+string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
+{
+    unsigned short bestCurrentChar = 2;
+    unsigned short prevousChar = 2;             //sentence beginn token
+    double probability;
+    double maxProbability = -10000000;
+
+    string correctedLine;
+    for(unsigned i = 0; i < line.length(); i = i + 2)
+    {
+        maxProbability = -10000000;
+        for(unsigned j = 3; j <= vocabLength; j++)
+        {
+            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * scores[j][prevousChar];
+            if (probability > maxProbability)
+            {
+                maxProbability = probability;
+                bestCurrentChar = j;
+            }
+        }
+        correctedLine = correctedLine + vocab[bestCurrentChar] + " ";
+        prevousChar = bestCurrentChar;
+    }
+
+    return correctedLine;
+}
+
+void partD(){
     string line;
     string lineRandom;
-    lineRandom = getRandomSequence(line, 1);
+    string lineCorrected;
+    ifstream myFile ("test_data");
+    if (myFile.is_open())
+    {
+        double lambda = 1;
+        getline (myFile,line);
+        lineRandom = getRandomSequence(line, lambda);
+        lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
+        cout << line << endl;
+        cout << lineCorrected << endl;
+    } else
+    {
+        cout << "error opening test_data" << endl;
+    }
 }
 
 int main (int argc, char *argv[])
 {
+    srand (time(NULL));
+    init_vocab();                               //from simple_lm
+    init_lm();                                  //from simple_lm
     //partA();
-    partB();
+    partD();
     return 0;
 }
