@@ -70,10 +70,14 @@ void partA()
     {
         cout << "error opening test_data" << endl;
     }
+    cout << "2. a)" << endl;
     cout << "Highest Perplexity: " << highestPerplexity << " of Sentence: " << posHighestPerplexity << endl;
-    cout << "Lowest Perplexity: " << lowestPerplexity << " of Sentence: " << posLowestPerplexity << endl;
+    cout << "Lowest Perplexity: " << lowestPerplexity << " of Sentence: " << posLowestPerplexity << endl << endl;
 }
 
+/*
+ * b)
+ */
 string getRandomSequence(string &line, double lambda)
 {
     string randomisedLine;
@@ -98,6 +102,9 @@ string getRandomSequence(string &line, double lambda)
     return randomisedLine;
 }
 
+/*
+ * c)
+ */
 double getAccuracy(string &line1, string &line2)
 {
     if(abs((int)line1.length() - (int)line2.length()) > 1)
@@ -131,7 +138,7 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
     unsigned short bestCurrentChar = 2;
     unsigned short prevousChar = 2;             //sentence beginn token
     double probability;
-    double maxProbability = -10000000;
+    double maxProbability;
 
     string correctedLine;
     for(unsigned i = 0; i < line.length(); i = i + 2)
@@ -139,7 +146,7 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
         maxProbability = -10000000;
         for(unsigned j = 3; j <= vocabLength; j++)
         {
-            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * scores[j][prevousChar];
+            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(10, scores[j][prevousChar]);
             if (probability > maxProbability)
             {
                 maxProbability = probability;
@@ -153,19 +160,28 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
     return correctedLine;
 }
 
-void partD(){
+void partD(double lambda){
     string line;
     string lineRandom;
     string lineCorrected;
+    double xErrorRate = 0;
+    double cErrorRate = 0;
+    int j = 0;
     ifstream myFile ("test_data");
+
     if (myFile.is_open())
     {
-        double lambda = 1;
-        getline (myFile,line);
-        lineRandom = getRandomSequence(line, lambda);
-        lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
-        cout << line << endl;
-        cout << lineCorrected << endl;
+        while(getline (myFile,line))
+        {
+            j++;
+            lineRandom = getRandomSequence(line, lambda);
+            lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
+            xErrorRate += getAccuracy(line, lineRandom);
+            cErrorRate += getAccuracy(line, lineCorrected);
+        }
+        xErrorRate /= j;
+        cErrorRate /= j;
+        cout << "Lambda: " << lambda << " error rate reduction: " << xErrorRate - cErrorRate << endl;
     } else
     {
         cout << "error opening test_data" << endl;
@@ -177,7 +193,15 @@ int main (int argc, char *argv[])
     srand (time(NULL));
     init_vocab();                               //from simple_lm
     init_lm();                                  //from simple_lm
-    //partA();
-    partD();
+
+    partA();
+
+    cout << "2.d)" << endl;
+    double lambda;
+    for(unsigned i = 1; i < 10; i++)
+    {
+        lambda = (double)i/10;
+        partD(lambda);
+    }
     return 0;
 }
