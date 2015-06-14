@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <math.h>       /* pow */
-#include <ctime>
+#include <math.h>       /* pow, abs */
+#include <ctime>        /* time() */
 #include "simple_lm.hh"
 
 #define vocabLength         29
@@ -13,6 +13,9 @@
 
 using namespace std;
 
+/*
+ * a)
+ */
 double getSentencePerplexity(string &line)
 {
     unsigned short currentChar = 2;
@@ -41,9 +44,9 @@ void partA()
 {
     string line;
     double perplexity;
-    double lowestPerplexity = 1;
-    double highestPerplexity = 0;
-    unsigned int posLowestPerplexity = 0;
+    double lowestPerplexity           = 1;
+    double highestPerplexity          = 0;
+    unsigned int posLowestPerplexity  = 0;
     unsigned int posHighestPerplexity = 0;
     unsigned int i = 0;
 
@@ -70,9 +73,8 @@ void partA()
     {
         cout << "error opening test_data" << endl;
     }
-    cout << "2. a)" << endl;
     cout << "Highest Perplexity: " << highestPerplexity << " of Sentence: " << posHighestPerplexity << endl;
-    cout << "Lowest Perplexity: " << lowestPerplexity << " of Sentence: " << posLowestPerplexity << endl << endl;
+    cout << "Lowest Perplexity: "  << lowestPerplexity  << " of Sentence: " << posLowestPerplexity << endl << endl;
 }
 
 /*
@@ -105,7 +107,7 @@ string getRandomSequence(string &line, double lambda)
 /*
  * c)
  */
-double getAccuracy(string &line1, string &line2)
+double getLineAccuracy(string &line1, string &line2)
 {
     if(abs((int)line1.length() - (int)line2.length()) > 1)
     {
@@ -133,28 +135,31 @@ double getPLambdaXnCn(char x, char c, double lambda)
     }
 }
 
+/*
+ * d)
+ */
 string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
 {
     unsigned short bestCurrentChar = 2;
-    unsigned short prevousChar = 2;             //sentence beginn token
+    unsigned short prevousChar = 2;                                     //sentence beginn token
     double probability;
     double maxProbability;
 
     string correctedLine;
     for(unsigned i = 0; i < line.length(); i = i + 2)
     {
-        maxProbability = -10000000;
-        for(unsigned j = 3; j <= vocabLength; j++)
-        {
+        maxProbability = 0;
+        for(unsigned j = 3; j <= vocabLength; j++)                      // 3 - vocamLength because 0 .. 2 are <unk> and sentence beginn/end
+        {                                                               // what we will all not need here
             probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(10, scores[j][prevousChar]);
             if (probability > maxProbability)
             {
                 maxProbability = probability;
-                bestCurrentChar = j;
+                bestCurrentChar = j;                                    // save arg max
             }
         }
-        correctedLine = correctedLine + vocab[bestCurrentChar] + " ";
-        prevousChar = bestCurrentChar;
+        correctedLine = correctedLine + vocab[bestCurrentChar] + " ";   // rebuild the "corrected" sentence
+        prevousChar   = bestCurrentChar;
     }
 
     return correctedLine;
@@ -164,24 +169,25 @@ void partD(double lambda){
     string line;
     string lineRandom;
     string lineCorrected;
-    double xErrorRate = 0;
-    double cErrorRate = 0;
-    int j = 0;
+    double xErrorAccuracy       = 0;
+    double cErrorAccuracy       = 0;
+    unsigned int documentLength = 0;
     ifstream myFile ("test_data");
 
     if (myFile.is_open())
     {
         while(getline (myFile,line))
         {
-            j++;
             lineRandom = getRandomSequence(line, lambda);
             lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
-            xErrorRate += getAccuracy(line, lineRandom);
-            cErrorRate += getAccuracy(line, lineCorrected);
+            xErrorAccuracy += getLineAccuracy(line, lineRandom) * (line.length() + 1) / 2;      // = # of correct characters
+            cErrorAccuracy += getLineAccuracy(line, lineCorrected) * (line.length() + 1) / 2;   // = # of correct characters
+            documentLength += (line.length() + 1) / 2;                                          // = document length
         }
-        xErrorRate /= j;
-        cErrorRate /= j;
-        cout << "Lambda: " << lambda << " error rate reduction: " << xErrorRate - cErrorRate << endl;
+        xErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
+        cErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
+        cout << "Lambda: " << lambda << " with accuracy improvment: " << cErrorAccuracy - xErrorAccuracy << endl;
+        cout << "The error rates are: X accuracy " << xErrorAccuracy << ", C accuracy " << cErrorAccuracy << endl;
     } else
     {
         cout << "error opening test_data" << endl;
@@ -194,6 +200,7 @@ int main (int argc, char *argv[])
     init_vocab();                               //from simple_lm
     init_lm();                                  //from simple_lm
 
+    cout << "2.a)" << endl;
     partA();
 
     cout << "2.d)" << endl;
