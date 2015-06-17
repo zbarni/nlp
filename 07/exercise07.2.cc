@@ -1,4 +1,4 @@
-// FIXME We assume that the training / test data are sorted according 
+// FIXME We assume that the training / test data are sorted according
 // to class names
 
 #include <iostream>
@@ -33,9 +33,9 @@ double getSentencePerplexity(string &line)
                 break;
             }
         }
-        perplexity = perplexity + pow(10 ,scores[currentChar][prevousChar]);
+        perplexity = perplexity + pow(exp(1.0) ,scores[currentChar][prevousChar]);
     }
-    perplexity = perplexity + pow(10 ,scores[sentenceEndToken][currentChar]);
+    perplexity = perplexity + pow(exp(1.0) ,scores[sentenceEndToken][currentChar]);
     perplexity = pow(perplexity, -(2/((double)line.length())+1));
     return perplexity;
 }
@@ -151,7 +151,7 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
         maxProbability = 0;
         for(unsigned j = 3; j <= vocabLength; j++)                      // 3 - vocamLength because 0 .. 2 are <unk> and sentence beginn/end
         {                                                               // what we will all not need here
-            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(10, scores[j][prevousChar]);
+            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prevousChar]);
             if (probability > maxProbability)
             {
                 maxProbability = probability;
