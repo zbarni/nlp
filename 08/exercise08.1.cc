@@ -1,15 +1,13 @@
-// FIXME We assume that the training / test data are sorted according 
-// to class names
-
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <math.h>       /* pow, abs */
 #include <ctime>        /* time() */
-#include "simple_lm.hh"
+#include "simple_lm_3gram.hh"
 
 #define vocabLength         29
 #define sentenceEndToken    1
+#define unkToken            0
 
 using namespace std;
 
@@ -43,9 +41,12 @@ string getRandomSequence(string &line, double lambda)
     return randomisedLine;
 }
 
+/*
+ * Works on new test data
+ */
 double getLineAccuracy(string &line1, string &line2)
 {
-    if(abs((int)line1.length() - (int)line2.length()) > 1)
+    if(abs((int)line1.length() - (int)line2.length()) == 0)
     {
         return -1;                      //check if both lines are of equal lengh
     }
@@ -57,9 +58,12 @@ double getLineAccuracy(string &line1, string &line2)
             accuracy++;
         }
     }
-    return accuracy / ((int)min(line1.length() + 1, line2.length() + 1)/2);
+    return accuracy / line1.length();
 }
 
+/*
+ * Works on new test data
+ */
 double getPLambdaXnCn(char x, char c, double lambda)
 {
     if(x == c)
@@ -67,14 +71,25 @@ double getPLambdaXnCn(char x, char c, double lambda)
         return lambda;
     } else
     {
-        return (1 - lambda)/25;         //X is 26(a..z & _)
+        if(((x >= 'a' && x <= 'z') || x == ' ') || ((c >= 'a' && c <= 'z') || c == ' '))
+        {
+            return lambda;                              // we have a <unk> and numbers or punktuations mark combinantion
+        } else
+        {
+            return (1 - lambda)/25;                     //X is 26(a..z & _)
+        }
     }
 }
 
+/*
+ * Works on new test data
+ */
 string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
 {
-    unsigned short bestCurrentChar = 2;
-    unsigned short prevousChar = 2;                                     //sentence beginn token
+    unsigned short bestCurrentChar      = 2;
+    unsigned short prevousChar          = 2;                            //sentence beginn token
+    unsigned short prePrevousChar       = 2;                            //sentence beginn token
+    unsigned short prePrePrevousChar    = 2;                            //sentence beginn token
     double probability;
     double maxProbability;
 
@@ -82,22 +97,42 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
     for(unsigned i = 0; i < line.length(); i = i + 2)
     {
         maxProbability = 0;
-        for(unsigned j = 3; j <= vocabLength; j++)                      // 3 - vocamLength because 0 .. 2 are <unk> and sentence beginn/end
-        {                                                               // what we will all not need here
-            probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prevousChar]);
+        for(unsigned j = 0; j <= vocabLength; j++)
+        {
+            if(j == 1)
+            {
+                j = 3;                                                  //just skip the sentence symbols
+            }
+            if(j == 3)                                                  // since vocab[3] == '_' use space ' ' instead
+            {
+                probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+            }else
+            {
+                probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+            }
             if (probability > maxProbability)
             {
                 maxProbability = probability;
                 bestCurrentChar = j;                                    // save arg max
             }
         }
-        correctedLine = correctedLine + vocab[bestCurrentChar] + " ";   // rebuild the "corrected" sentence
-        prevousChar   = bestCurrentChar;
+        if(bestCurrentChar == unkToken)
+        {
+            correctedLine = correctedLine + line[i];                    //remain symbol
+        } else
+        {
+            correctedLine = correctedLine + vocab[bestCurrentChar];     // rebuild the "corrected" sentence
+        }
+        prevousChar     = bestCurrentChar;
+        prePrevousChar  = prevousChar;
     }
 
     return correctedLine;
 }
 
+/*
+ * Works on new test data
+ */
 void partD(double lambda){
     string line;
     string lineRandom;
@@ -105,7 +140,7 @@ void partD(double lambda){
     double xErrorAccuracy       = 0;
     double cErrorAccuracy       = 0;
     unsigned int documentLength = 0;
-    ifstream myFile ("test_data");
+    ifstream myFile ("e-test.ref");
 
     if (myFile.is_open())
     {
@@ -113,9 +148,9 @@ void partD(double lambda){
         {
             lineRandom = getRandomSequence(line, lambda);
             lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
-            xErrorAccuracy += getLineAccuracy(line, lineRandom) * (line.length() + 1) / 2;      // = # of correct characters
-            cErrorAccuracy += getLineAccuracy(line, lineCorrected) * (line.length() + 1) / 2;   // = # of correct characters
-            documentLength += (line.length() + 1) / 2;                                          // = document length
+            xErrorAccuracy += getLineAccuracy(line, lineRandom) * line.length();                // = # of correct characters
+            cErrorAccuracy += getLineAccuracy(line, lineCorrected) * line.length();             // = # of correct characters
+            documentLength += line.length();
         }
         xErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
         cErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
@@ -133,7 +168,7 @@ int main (int argc, char *argv[])
     init_vocab();                               //from simple_lm
     init_lm();                                  //from simple_lm
 
-    cout << "2.d)" << endl;
+    cout << "1.a)" << endl;
     double lambda;
     for(unsigned i = 1; i < 10; i++)
     {
