@@ -71,7 +71,7 @@ double getPLambdaXnCn(char x, char c, double lambda)
         return lambda;
     } else
     {
-        if(((x >= 'a' && x <= 'z') || x == ' ') || ((c >= 'a' && c <= 'z') || c == ' '))
+        if(((x >= 'a' && x <= 'z') || x == ' ') && ((c >= 'a' && c <= 'z') || c == ' '))
         {
             return lambda;                              // we have a <unk> and numbers or punktuations mark combinantion
         } else
