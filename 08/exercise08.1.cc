@@ -3,7 +3,7 @@
 #include <string>
 #include <math.h>       /* pow, abs */
 #include <ctime>        /* time() */
-#include "simple_lm_3gram.hh"
+#include "simple_lm.hh"
 
 #define vocabLength         29
 #define sentenceEndToken    1
@@ -28,13 +28,15 @@ string getRandomSequence(string &line, double lambda)
                 randomisedLine = randomisedLine + line[i];
             } else
             {
-                char randomChar = (rand() % 25) + (int)'a';
+                char randomChar = (rand() % 26) + (int)'a';
                 if(randomChar == line[i])
                 {
                     randomChar = ' ';
                 }
                 randomisedLine = randomisedLine + randomChar;
             }
+        } else {
+            randomisedLine = randomisedLine + line[i];
         }
     }
 
@@ -46,12 +48,12 @@ string getRandomSequence(string &line, double lambda)
  */
 double getLineAccuracy(string &line1, string &line2)
 {
-    if(abs((int)line1.length() - (int)line2.length()) == 0)
+    if((line1.length() != line2.length()))
     {
         return -1;                      //check if both lines are of equal lengh
     }
     double accuracy = 0;
-    for (unsigned i = 0; i < line1.length(); i = i + 2)
+    for (unsigned i = 0; i < line1.length(); i = i + 1)
     {
         if(line1[i] == line2[i])
         {
@@ -94,7 +96,7 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
     double maxProbability;
 
     string correctedLine;
-    for(unsigned i = 0; i < line.length(); i = i + 2)
+    for(unsigned i = 0; i < line.length(); i = i + 1)
     {
         maxProbability = 0;
         for(unsigned j = 0; j <= vocabLength; j++)
@@ -105,11 +107,13 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
             }
             if(j == 3)                                                  // since vocab[3] == '_' use space ' ' instead
             {
-                probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+                probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prevousChar]);
+                //probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
                 //probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrePrevousChar][prePrevousChar][prevousChar]);
             }else
             {
-                probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+                probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prevousChar]);
+                //probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
                 //probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrePrevousChar][prePrevousChar][prevousChar]);
             }
             if (probability > maxProbability)
@@ -153,12 +157,18 @@ void partA(double lambda){
             lineCorrected = getMinimumStringErrorRateSpellingCorrection(lineRandom, lambda);
             xErrorAccuracy += getLineAccuracy(line, lineRandom) * line.length();                // = # of correct characters
             cErrorAccuracy += getLineAccuracy(line, lineCorrected) * line.length();             // = # of correct characters
+            cout << "The error rates are: X error rate " << getLineAccuracy(line, lineRandom) << endl;
             documentLength += line.length();
+            cout << line << endl;
+            cout << lineRandom << endl;
+            //cout << lineCorrected << endl;
+            break;
         }
         xErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
         cErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
         cout << "Lambda: " << lambda << " with error rate improvment: " << - cErrorAccuracy + xErrorAccuracy << endl;
-        cout << "The error rates are: X error rate" << 1 - xErrorAccuracy << ", C error rate" << 1 - cErrorAccuracy << endl;
+        cout << "The error rates are: X error rate " << 1 - xErrorAccuracy << ", C error rate " << 1 - cErrorAccuracy << endl;
+
     } else
     {
         cout << "error opening test_data" << endl;
@@ -172,11 +182,8 @@ int main (int argc, char *argv[])
     init_lm();                                  //from simple_lm
 
     cout << "1.a)" << endl;
-    double lambda;
-    for(unsigned i = 1; i < 10; i++)
-    {
-        lambda = (double)i/10;
-        partA(lambda);
-    }
+    //double lambda;
+    //lambda = (double)i/10;
+    partA(0.8);
     return 0;
 }
