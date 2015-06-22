@@ -106,9 +106,11 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
             if(j == 3)                                                  // since vocab[3] == '_' use space ' ' instead
             {
                 probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+                //probability = getPLambdaXnCn(' ',         line[i], lambda) * pow(exp(1.0), scores[j][prePrePrevousChar][prePrevousChar][prevousChar]);
             }else
             {
                 probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrevousChar][prevousChar]);
+                //probability = getPLambdaXnCn(vocab[j][0], line[i], lambda) * pow(exp(1.0), scores[j][prePrePrevousChar][prePrevousChar][prevousChar]);
             }
             if (probability > maxProbability)
             {
@@ -123,8 +125,9 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
         {
             correctedLine = correctedLine + vocab[bestCurrentChar];     // rebuild the "corrected" sentence
         }
-        prevousChar     = bestCurrentChar;
-        prePrevousChar  = prevousChar;
+        prevousChar         = bestCurrentChar;
+        prePrevousChar      = prevousChar;
+        prePrePrevousChar   = prePrevousChar;
     }
 
     return correctedLine;
@@ -133,7 +136,7 @@ string getMinimumStringErrorRateSpellingCorrection(string &line, double lambda)
 /*
  * Works on new test data
  */
-void partD(double lambda){
+void partA(double lambda){
     string line;
     string lineRandom;
     string lineCorrected;
@@ -154,8 +157,8 @@ void partD(double lambda){
         }
         xErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
         cErrorAccuracy /= documentLength;                                                       // = document's accuracy (instead of line's accuracy)
-        cout << "Lambda: " << lambda << " with accuracy improvment: " << cErrorAccuracy - xErrorAccuracy << endl;
-        cout << "The error rates are: X accuracy " << xErrorAccuracy << ", C accuracy " << cErrorAccuracy << endl;
+        cout << "Lambda: " << lambda << " with error rate improvment: " << - cErrorAccuracy + xErrorAccuracy << endl;
+        cout << "The error rates are: X error rate" << 1 - xErrorAccuracy << ", C error rate" << 1 - cErrorAccuracy << endl;
     } else
     {
         cout << "error opening test_data" << endl;
@@ -173,7 +176,7 @@ int main (int argc, char *argv[])
     for(unsigned i = 1; i < 10; i++)
     {
         lambda = (double)i/10;
-        partD(lambda);
+        partA(lambda);
     }
     return 0;
 }
