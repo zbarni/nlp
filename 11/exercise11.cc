@@ -415,7 +415,7 @@ double deltaTrans(int delta, int e, int ePrimeInd)
 {
     if (delta == 0)
     {
-        return (double)(e == ePrimeInd);
+        return log(e == ePrimeInd);
     }
 
     if (delta == 1)
@@ -447,12 +447,7 @@ double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
         {
             int ePrimeInd = eVocabulary[eIt->first];
             score = trans[delta][max(i - delta, 1)] + deltaTrans(delta, e, ePrimeInd) + Q[ePrimeInd][i][j];
-            if (score == 15)
-            {
-                cout << "Trans: " << trans[delta][max(i - delta, 1)] << " deltaTrans: "<< deltaTrans(delta, e, ePrimeInd) << " Q: " << Q[ePrimeInd][i][j] << endl;
-                cout << score << endl;
-                abort();
-            }
+
             if (score > bestScore)
             {
                 bestScore = score;
