@@ -6,6 +6,8 @@
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
 using namespace std;
 
+double lambda;
+
 /*
  * basically numberOfWordsInSentence returns the number of spaces + 1
  */
@@ -28,7 +30,7 @@ unsigned numberOfWordsInSentence(string &sentence)
 /*
  * Implementation of the Levenshtein distance for words
  */
-int numberOfErrorsInSentence(string &sentence1, string &sentence2)
+int numberOfWordErrorsInSentence(string &sentence1, string &sentence2)
 {
     int numberOfSentence1Words = numberOfWordsInSentence(sentence1);
     int numberOfSentence2Words = numberOfWordsInSentence(sentence2);
@@ -101,7 +103,7 @@ double getWER(string &hypothesisSentence, string &referenceSentence)
         }
     }
 
-    double numberOfErrors         = numberOfErrorsInSentence(hypothesisSentence, referenceSentence);
+    double numberOfErrors         = numberOfWordErrorsInSentence(hypothesisSentence, referenceSentence);
     double numberOfReferenceWords = numberOfWordsInSentence(referenceSentence);
 
     return min((double)numberOfErrors/numberOfReferenceWords, (double)1);
@@ -178,10 +180,54 @@ double getPER(string &hypothesisSentence, string &referenceSentence)
     return min(numberOfErrors/numberOfReferenceWords, (double)1);
 }
 
+/*
+ * calculation of the Lambda as defined in lecture
+ */
+double getLengthModelLambda()
+{
+    ifstream e_file("e");
+    ifstream f_file("f");
+
+    string lineE;
+    string lineF;
+
+    double sumOfWordsE = 0;
+    double sumOfWordsF = 0;
+
+    while(getline(e_file,lineE) && getline(f_file, lineF))
+    {
+        sumOfWordsE += numberOfWordsInSentence(lineE);
+        sumOfWordsF += numberOfWordsInSentence(lineF) - 1; //since every sentence in f is ending with a space
+    }
+
+    e_file.close();
+    f_file.close();
+
+    return sumOfWordsF/sumOfWordsE;
+}
+
+unsigned factorial(unsigned number)
+{
+    unsigned fac = 1;
+    while(number > 0)
+    {
+        fac = fac * number;
+        number--;
+    }
+    return fac;
+}
+
+double getLengthProbability(double I, unsigned J)
+{
+    return exp(-lambda*I)*pow(lambda*I,J)/factorial(J);
+}
+
 int main (int argc, char *argv[])
 {
+    lambda = getLengthModelLambda();
+
     string testShort = "dies bla ein test";
-    string testLong  = "test dies blub ein";
+    string testLong  = "test dies blub ein blaaa";
     double test = getPER(testShort, testLong);
     cout << test << endl;
     return 1;
