@@ -18,11 +18,11 @@ using namespace std;
 double lambda;
 unsigned nrSourceWords;
 unsigned nrTargetWords;
-int Q[Nmax][Nmax][Nmax];
+double Q[Nmax][Nmax][Nmax];
 double trans[Nmax][Nmax]; // p(i | i - delta) --> [i][delta]
 map <string, int> eVocabulary;
 map <string, int> fVocabulary;
-map <int, vector<pair<int, double>>> lexicon; // <fIndex, pair<eIndex, probability>>
+double lexicon[Nmax][Nmax]; // <fIndex, pair<eIndex, probability>>
 double bigramLM[Nmax][Nmax];
 
 /*
@@ -332,8 +332,15 @@ void parseLexicon()
             exit(-1);
         }
         double prob = stod(tokens[2]);
-        lexicon[fVocabulary[tokens[0]]].push_back(make_pair(eVocabulary[tokens[1]], prob));
+        lexicon[fVocabulary[tokens[0]]][eVocabulary[tokens[1]]] = prob;
     }
+    /*for(unsigned i = 2; i < 40; i++)      //DEBUG ONLY
+    {
+        for(unsigned j = 2; j < 30; j++)
+        {
+            cout << "f: " << i << " e: " << j << " prob: "<< lexicon[i][j]<< endl;
+        }
+    }*/
 }
 
 void parseTransitions() 
@@ -415,7 +422,7 @@ double deltaTrans(int delta, int e, int ePrimeInd)
 {
     if (delta == 0)
     {
-        return log(e == ePrimeInd);
+        return probToLog(e == ePrimeInd);
     }
 
     if (delta == 1)
@@ -495,8 +502,13 @@ void DPSearch(double lambda)
                 {
                     int bestDelta = -1;
                     int bestPrevWordInd = -1;
-                    Q[eVocabulary[eIt->first]][i][j] = lexicon[fVocabulary[word]][eVocabulary[eIt->first]].second 
-                            + computeMax(j, i, eVocabulary[eIt->first], bestDelta, bestPrevWordInd);
+                    double lexicalLogProbability = probToLog(lexicon[fVocabulary[word]][eVocabulary[eIt->first]]);
+                    double maximalRecursion = computeMax(j, i, eVocabulary[eIt->first], bestDelta, bestPrevWordInd);
+                    Q[eVocabulary[eIt->first]][i][j] = lexicalLogProbability + maximalRecursion;
+                    /*cout << "Q: " << Q[eVocabulary[eIt->first]][i][j];        //DEBUG ONLY
+                    cout << " computeMax: "<< maximalRecursion;
+                    cout << " lexicon: " << lexicalLogProbability;
+                    cout << endl;*/
                 }
             }
         }
