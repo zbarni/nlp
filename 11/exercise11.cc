@@ -1,3 +1,4 @@
+// TODO fallback from bigram to 1-gram
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -10,17 +11,20 @@
 #include <cassert>
 
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
-#define Nmax 50
+#define Nmax 40
 #define Imax 30
 using namespace std;
 
 double lambda;
+unsigned nrSourceWords;
+unsigned nrTargetWords;
 int Q[Nmax][Nmax][Nmax];
 double trans[Nmax][Nmax]; // p(i | i - delta) --> [i][delta]
 map <string, int> eVocabulary;
 map <string, int> fVocabulary;
 map <int, vector<pair<int, double>>> lexicon; // <fIndex, pair<eIndex, probability>>
 double bigramLM[Nmax][Nmax];
+
 /*
  * basically numberOfWordsInSentence returns the number of spaces + 1
  */
@@ -275,6 +279,7 @@ void initVocabulary()
             }
             break;
         }
+    nrTargetWords = cnt;
 
     cnt = 0;
     ifstream sourceLMFile("feldmann/lm-f");
@@ -295,6 +300,7 @@ void initVocabulary()
             }
             break;
         }
+    nrSourceWords = cnt;
 }
 
 double logToProb(double l)
@@ -343,6 +349,7 @@ void parseTransitions()
 
     while(getline (file,line)) 
     {
+        if (line == "") return;
         vector<string> tokens = split(line, ' ');
         delta = stoi(tokens[0]);
         i = stoi(tokens[1]);
@@ -354,6 +361,7 @@ void parseTargetLM()
 {
     string line;
     string w1, w2;
+    map<int, pair<double, double>> onegram;
     ifstream file("feldmann/lm-e");
     if (!file.is_open()) 
     {
@@ -363,13 +371,41 @@ void parseTargetLM()
 
     while(getline (file,line)) 
     {
+        if (line.find("1-grams") != string::npos) 
+        {
+            while(getline (file,line)) 
+            {
+                if (line == "" || line == "\n") break;
+                vector<string> tokens = split(line, '\t');
+                double fallbackProb;
+                if (tokens.size() < 3)
+                    fallbackProb = -99;
+                else
+                    fallbackProb = stod(tokens[2]);
+                onegram[eVocabulary[tokens[1]]] = make_pair(stod(tokens[0]), fallbackProb);
+            }
+            getline (file,line);
+        }
         if (line.find("2-grams") != string::npos) 
         {
             while(getline (file,line)) 
             {
-                if (line == "") return;
-                vector<string> tokens = split(line, ' ');
-                bigramLM[eVocabulary[tokens[1]]][eVocabulary[tokens[2]]] = stod(tokens[0]);
+                if (line == "") break;
+                vector<string> tokens = split(line, '\t');
+                vector<string> words = split(tokens[1], ' ');
+                bigramLM[eVocabulary[words[0]]][eVocabulary[words[1]]] = stod(tokens[0]);
+            }
+            break;
+        }
+    }
+
+    for (unsigned i = 0; i < nrTargetWords; ++i)
+    {
+        for (unsigned j = 0; j < nrTargetWords; ++j)
+        {
+            if (!bigramLM[i][j]) 
+            {
+                bigramLM[i][j] = onegram[i].second + onegram[j].first;
             }
         }
     }
@@ -429,6 +465,7 @@ void DPSearch(double lambda)
     parseLexicon();
     parseTransitions();
     parseTargetLM();
+//    return;
 
     ifstream sourceTestFile("feldmann/f-test");
     if (!sourceTestFile.is_open()) 
@@ -465,7 +502,6 @@ int main (int argc, char *argv[])
 {
     lambda = getLengthModelLambda();
     DPSearch(lambda);
-
     string testShort = "dies bla ein test";
     string testLong  = "test dies blub ein blaaa";
 //    double test = getPER(testShort, testLong);
@@ -478,5 +514,8 @@ int main (int argc, char *argv[])
 //    {
 //        cout << i->first << " " << i->second << endl;
 //    }
+//    cout << deltaTrans([eVocabulary["below"]][eVocabulary["the"]] << endl;
+    cout << bigramLM[eVocabulary["right"]][eVocabulary["small"]] << endl;
+    cout << bigramLM[eVocabulary["small"]][eVocabulary["circle"]] << endl;
     return 1;
 }
