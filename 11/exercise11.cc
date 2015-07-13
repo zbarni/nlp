@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <climits>
 
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
 using namespace std;
@@ -15,11 +16,12 @@ unsigned numberOfWordsInSentence(string &sentence)
 
     unsigned number = 1;
     unsigned positionOfSpace = sentence.find(" ");
-    while( positionOfSpace < sentence.length())
+    while( positionOfSpace != UINT_MAX)
     {
         number++;
         positionOfSpace = sentence.find(" ", positionOfSpace + 1);
     }
+
     return number;
 }
 
@@ -151,7 +153,7 @@ double getPER(string &hypothesisSentence, string &referenceSentence)
         word = hypothesisSentence.substr(prevousPositionSentence - 1, positionOfSpaceInSentence - prevousPositionSentence + 1);
         prevousPositionSentence   = positionOfSpaceInSentence + 1;
         positionOfSpaceInSentence = hypothesisSentence.find(" ", positionOfSpaceInSentence + 1);
-        if(referenceSentence.find(word) > referenceSentence.length())
+        if(referenceSentence.find(word) == string::npos)
         {
             numberOfDeletions++;
         }
@@ -165,7 +167,7 @@ double getPER(string &hypothesisSentence, string &referenceSentence)
         word = referenceSentence.substr(prevousPositionSentence - 1, positionOfSpaceInSentence - prevousPositionSentence + 1);
         prevousPositionSentence   = positionOfSpaceInSentence + 1;
         positionOfSpaceInSentence = referenceSentence.find(" ", positionOfSpaceInSentence + 1);
-        if(hypothesisSentence.find(word) > hypothesisSentence.length())
+        if(hypothesisSentence.find(word) == string::npos)
         {
             numberOfInsertions++;
         }
