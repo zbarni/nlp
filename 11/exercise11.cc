@@ -1,13 +1,26 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <climits>
+#include <map>
+#include <cmath>
+#include <vector>
+#include <limits>
+#include <cassert>
 
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
+#define Nmax 50
+#define Imax 30
 using namespace std;
 
 double lambda;
-
+int Q[Nmax][Nmax][Nmax];
+double trans[Nmax][Nmax]; // p(i | i - delta) --> [i][delta]
+map <string, int> eVocabulary;
+map <string, int> fVocabulary;
+map <int, vector<pair<int, double>>> lexicon; // <fIndex, pair<eIndex, probability>>
+double bigramLM[Nmax][Nmax];
 /*
  * basically numberOfWordsInSentence returns the number of spaces + 1
  */
@@ -55,7 +68,7 @@ int numberOfWordErrorsInSentence(string &sentence1, string &sentence2)
     for(int i = 1; i <= numberOfSentence1Words; i++)
     {
         //get one word
-                        //substr(position, length)
+        //substr(position, length)
         word1 = sentence1.substr(prevousPositionSentence1, positionOfSpaceInSentence1 - prevousPositionSentence1);
         prevousPositionSentence1   = positionOfSpaceInSentence1 + 1;
         positionOfSpaceInSentence1 = sentence1.find(" ", positionOfSpaceInSentence1 + 1);
@@ -67,9 +80,9 @@ int numberOfWordErrorsInSentence(string &sentence1, string &sentence2)
             positionOfSpaceInSentence2 = sentence2.find(" " , positionOfSpaceInSentence2 + 1);
 
             levensteinMatrix[i][j] = MIN3(levensteinMatrix[i - 1][j] + 1,   //deletion
-                                          levensteinMatrix[i][j - 1] + 1,   //insertion
-                                          levensteinMatrix[i - 1][j - 1] + (word1.compare(word2) == 0 ? 0 : 1));
-                                                                            //case sensitive depending on equation of words);
+                    levensteinMatrix[i][j - 1] + 1,   //insertion
+                    levensteinMatrix[i - 1][j - 1] + (word1.compare(word2) == 0 ? 0 : 1));
+            //case sensitive depending on equation of words);
         }
         // reset word list in sentence2
         prevousPositionSentence2   = 0;
@@ -222,13 +235,248 @@ double getLengthProbability(double I, unsigned J)
     return exp(-lambda*I)*pow(lambda*I,J)/factorial(J);
 }
 
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
+}
+
+void initVocabulary() 
+{
+    string line;
+    int cnt = 0;
+    // open LM file
+    ifstream targetLMFile("feldmann/lm-e");
+    if (!targetLMFile.is_open()) 
+    {
+        cout << "Could not open target LM file. Exiting." << endl;
+        exit(-1);
+    }
+
+    while(getline (targetLMFile,line)) 
+        if (line.find("1-grams") != string::npos) 
+        {
+            while(getline (targetLMFile,line))
+            {
+                if (line == "") break;
+                vector<string> tokens = split(line, '\t');
+//                cout << tokens[1] << endl;
+                eVocabulary[tokens[1]] = cnt++;
+            }
+            break;
+        }
+
+    cnt = 0;
+    ifstream sourceLMFile("feldmann/lm-f");
+    if (!sourceLMFile.is_open()) 
+    {
+        cout << "Could not open source LM file. Exiting." << endl;
+        exit(-1);
+    }
+
+    while(getline (sourceLMFile,line)) 
+        if (line.find("1-grams") != string::npos) 
+        {
+            while(getline (sourceLMFile,line))
+            {
+                if (line == "") break;
+                vector<string> tokens = split(line, '\t');
+                fVocabulary[tokens[1]] = cnt++;
+            }
+            break;
+        }
+}
+
+double logToProb(double l)
+{
+    return pow(10, l);
+}
+
+double probToLog(double p)
+{
+    return log10(p);
+}
+
+void parseLexicon()
+{
+    string line;
+    ifstream file("feldmann/lexicon.probs");
+    if (!file.is_open()) 
+    {
+        cout << "Could not open lexicon probability file. Exiting." << endl;
+        exit(-1);
+    }
+
+    while(getline (file,line)) 
+    {
+        vector<string> tokens = split(line, ' ');
+        if (!eVocabulary.count(tokens[1]) || !fVocabulary.count(tokens[0]))
+        {
+            cout << "Words in lexicon not present in language models files. Exiting." << endl;
+            exit(-1);
+        }
+        double prob = stod(tokens[2]);
+        lexicon[fVocabulary[tokens[0]]].push_back(make_pair(eVocabulary[tokens[1]], prob));
+    }
+}
+
+void parseTransitions() 
+{
+    string line;
+    int i, delta;
+    ifstream file("feldmann/transition.probs");
+    if (!file.is_open()) 
+    {
+        cout << "Could not open transition probability file. Exiting." << endl;
+        exit(-1);
+    }
+
+    while(getline (file,line)) 
+    {
+        vector<string> tokens = split(line, ' ');
+        delta = stoi(tokens[0]);
+        i = stoi(tokens[1]);
+        trans[delta][i] = probToLog(stod(tokens[2]));
+    }
+}
+
+void parseTargetLM() 
+{
+    string line;
+    string w1, w2;
+    ifstream file("feldmann/lm-e");
+    if (!file.is_open()) 
+    {
+        cout << "Could not open transition probability file. Exiting." << endl;
+        exit(-1);
+    }
+
+    while(getline (file,line)) 
+    {
+        if (line.find("2-grams") != string::npos) 
+        {
+            while(getline (file,line)) 
+            {
+                if (line == "") return;
+                vector<string> tokens = split(line, ' ');
+                bigramLM[eVocabulary[tokens[1]]][eVocabulary[tokens[2]]] = stod(tokens[0]);
+            }
+        }
+    }
+}
+
+double deltaTrans(int delta, int e, int ePrimeInd)
+{
+    if (delta == 0)
+    {
+        return (double)(e == ePrimeInd);
+    }
+
+    if (delta == 1)
+    {
+       return bigramLM[ePrimeInd][e]; 
+    }
+
+    double bestScore = numeric_limits<double>::min();
+    for (map<string,int>::iterator eIt = eVocabulary.begin(); eIt != eVocabulary.end(); ++eIt)
+    {
+        int eTilde = eVocabulary[eIt->first];
+        double score = bigramLM[eTilde][e] + bigramLM[ePrimeInd][eTilde];
+        if (score > bestScore)
+            bestScore = score;
+    }
+    return bestScore;
+}
+
+double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
+{
+    double bestScore = numeric_limits<double>::min();
+    double score;
+    for (int delta = 0; delta < 3; ++delta)
+    {
+        for (map<string,int>::iterator eIt = eVocabulary.begin(); eIt != eVocabulary.end(); ++eIt)
+        {
+            int ePrimeInd = eVocabulary[eIt->first];
+            score = trans[delta][max(i - delta, 1)] + deltaTrans(delta, e, ePrimeInd) + Q[ePrimeInd][i][j];
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestDelta = delta;
+                bestPrevWordInd = ePrimeInd;
+            }
+        }
+    }
+    assert(numeric_limits<double>::min() != bestScore);
+    return bestScore;
+}
+
+void DPSearch(double lambda)
+{
+    string line;
+    string sentence;
+    string word;
+    initVocabulary();
+    parseLexicon();
+    parseTransitions();
+    parseTargetLM();
+
+    ifstream sourceTestFile("feldmann/f-test");
+    if (!sourceTestFile.is_open()) 
+    {
+        cout << "Could not open source test file. Exiting." << endl;
+        exit(-1);
+    }
+
+    // for each sentence in source file
+    while(getline(sourceTestFile, sentence))
+    {
+        // for each word in sentence
+        vector<string> tokens = split(sentence, ' ');
+        for (unsigned j = 1; j <= tokens.size(); ++j)
+        {
+            word = tokens[j - 1];
+            // for each position 1...Imax
+            for (unsigned i = 1; i <= Imax; ++i) 
+            {
+                // for each word e'
+                for (map<string,int>::iterator eIt = eVocabulary.begin(); eIt != eVocabulary.end(); ++eIt)
+                {
+                    int bestDelta = -1;
+                    int bestPrevWordInd = -1;
+                    Q[eVocabulary[eIt->first]][i][j] = lexicon[fVocabulary[word]][eVocabulary[eIt->first]].second 
+                            + computeMax(j, i, eVocabulary[eIt->first], bestDelta, bestPrevWordInd);
+                }
+            }
+        }
+    }
+}
+
 int main (int argc, char *argv[])
 {
     lambda = getLengthModelLambda();
+    DPSearch(lambda);
 
     string testShort = "dies bla ein test";
     string testLong  = "test dies blub ein blaaa";
-    double test = getPER(testShort, testLong);
-    cout << test << endl;
+//    double test = getPER(testShort, testLong);
+//    cout << test << endl;
+//    for (map<string, int>::iterator i = eVocabulary.begin(); i != eVocabulary.end(); ++i)
+//    {
+//        cout << i->first << " " << i->second << endl;
+//    }
+//    for (map<string, int>::iterator i = fVocabulary.begin(); i != fVocabulary.end(); ++i)
+//    {
+//        cout << i->first << " " << i->second << endl;
+//    }
     return 1;
 }
