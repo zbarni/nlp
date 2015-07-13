@@ -422,21 +422,24 @@ double deltaTrans(int delta, int e, int ePrimeInd)
     {
        return bigramLM[ePrimeInd][e]; 
     }
+    //cout << "foo" << endl;
 
-    double bestScore = numeric_limits<double>::min();
+    double bestScore = -numeric_limits<double>::max();
     for (map<string,int>::iterator eIt = eVocabulary.begin(); eIt != eVocabulary.end(); ++eIt)
     {
         int eTilde = eVocabulary[eIt->first];
         double score = bigramLM[eTilde][e] + bigramLM[ePrimeInd][eTilde];
         if (score > bestScore)
+        {
             bestScore = score;
+        }
     }
     return bestScore;
 }
 
 double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
 {
-    double bestScore = numeric_limits<double>::min();
+    double bestScore = -numeric_limits<double>::max();
     double score;
     for (int delta = 0; delta < 3; ++delta)
     {
@@ -444,6 +447,12 @@ double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
         {
             int ePrimeInd = eVocabulary[eIt->first];
             score = trans[delta][max(i - delta, 1)] + deltaTrans(delta, e, ePrimeInd) + Q[ePrimeInd][i][j];
+            if (score == 15)
+            {
+                cout << "Trans: " << trans[delta][max(i - delta, 1)] << " deltaTrans: "<< deltaTrans(delta, e, ePrimeInd) << " Q: " << Q[ePrimeInd][i][j] << endl;
+                cout << score << endl;
+                abort();
+            }
             if (score > bestScore)
             {
                 bestScore = score;
@@ -452,7 +461,8 @@ double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
             }
         }
     }
-    assert(numeric_limits<double>::min() != bestScore);
+    //cout << bestScore << endl;
+    assert(-numeric_limits<double>::max() != bestScore);
     return bestScore;
 }
 
