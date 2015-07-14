@@ -1,4 +1,3 @@
-// TODO fallback from bigram to 1-gram
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -19,8 +18,11 @@ double lambda;
 unsigned nrSourceWords;
 unsigned nrTargetWords;
 double Q[Nmax][Nmax][Nmax];
+int decisionDelta[Nmax][Nmax][Nmax]; // store the delta leading to the best decision 
+int decisionWord[Nmax][Nmax][Nmax]; // store the e' leading to the best decision 
 double trans[Nmax][Nmax]; // p(i | i - delta) --> [i][delta]
 map <string, int> eVocabulary;
+map <int, string> eIndToWord;
 map <string, int> fVocabulary;
 double lexicon[Nmax][Nmax]; // <fIndex, pair<eIndex, probability>>
 double bigramLM[Nmax][Nmax];
@@ -202,8 +204,8 @@ double getPER(string &hypothesisSentence, string &referenceSentence)
  */
 double getLengthModelLambda()
 {
-    ifstream e_file("e");
-    ifstream f_file("f");
+    ifstream e_file("feldmann/e");
+    ifstream f_file("feldmann/f");
 
     string lineE;
     string lineF;
@@ -274,8 +276,8 @@ void initVocabulary()
             {
                 if (line == "") break;
                 vector<string> tokens = split(line, '\t');
-//                cout << tokens[1] << endl;
                 eVocabulary[tokens[1]] = cnt++;
+                eIndToWord[cnt - 1] = tokens[1];
             }
             break;
         }
@@ -468,6 +470,16 @@ double computeMax(int j, int i, int e, int &bestDelta, int &bestPrevWordInd)
     return bestScore;
 }
 
+void traceback(int i, int j, int eInd)
+{
+    if (i < 1 || j < 1)
+    {
+        return;
+    }
+    traceback(i - decisionDelta[eInd][i][j], j - 1, decisionWord[eInd][i][j]);
+    cout << eIndToWord[eInd] << " ";
+}
+
 void DPSearch(double lambda)
 {
     string line;
@@ -477,7 +489,6 @@ void DPSearch(double lambda)
     parseLexicon();
     parseTransitions();
     parseTargetLM();
-//    return;
 
     ifstream sourceTestFile("feldmann/f-test");
     if (!sourceTestFile.is_open()) 
@@ -489,6 +500,7 @@ void DPSearch(double lambda)
     // for each sentence in source file
     while(getline(sourceTestFile, sentence))
     {
+        cout << "Sentence to be translated: " << endl << "\t" << sentence << endl;
         // for each word in sentence
         vector<string> tokens = split(sentence, ' ');
         for (unsigned j = 1; j <= tokens.size(); ++j)
@@ -505,6 +517,8 @@ void DPSearch(double lambda)
                     double lexicalLogProbability = probToLog(lexicon[fVocabulary[word]][eVocabulary[eIt->first]]);
                     double maximalRecursion = computeMax(j, i, eVocabulary[eIt->first], bestDelta, bestPrevWordInd);
                     Q[eVocabulary[eIt->first]][i][j] = lexicalLogProbability + maximalRecursion;
+                    decisionDelta[eVocabulary[eIt->first]][i][j] = bestDelta;
+                    decisionWord[eVocabulary[eIt->first]][i][j] = bestPrevWordInd;
                     /*cout << "Q: " << Q[eVocabulary[eIt->first]][i][j];        //DEBUG ONLY
                     cout << " computeMax: "<< maximalRecursion;
                     cout << " lexicon: " << lexicalLogProbability;
@@ -512,6 +526,31 @@ void DPSearch(double lambda)
                 }
             }
         }
+        // traceback best solution
+        int J = tokens.size();
+        int bestI = -1;
+        int bestPrevWordInd = -1;
+        double bestScore = -numeric_limits<double>::max();
+        for (unsigned I = 1; I < Imax; ++I)
+        {
+            // for each word e~ (tilde)
+            for (map<string,int>::iterator eIt = eVocabulary.begin(); eIt != eVocabulary.end(); ++eIt)
+            {
+                double score = log10(getLengthProbability(I, J)) + Q[eVocabulary[eIt->first]][I][J];
+//                cout << "logLengthProb: " << getLengthProbability(I, J) << ", lambda: " << lambda << ", Q[value]: " << Q[eVocabulary[eIt->first]][I][J] << endl;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestI = I;
+                    bestPrevWordInd = eVocabulary[eIt->first];
+                }
+            }        
+        }
+        cout << "Translation: " << endl << "\t";
+        traceback(bestI, J, bestPrevWordInd);
+        cout << endl;
+        cout << "logarithmic bestScore: " << bestScore << "\nbestI: " << bestI << "\nbestEPrime(maximizing word): " << eIndToWord[bestPrevWordInd] << endl;
+        cout << endl << endl;
     }
 }
 
@@ -523,16 +562,5 @@ int main (int argc, char *argv[])
     string testLong  = "test dies blub ein blaaa";
 //    double test = getPER(testShort, testLong);
 //    cout << test << endl;
-//    for (map<string, int>::iterator i = eVocabulary.begin(); i != eVocabulary.end(); ++i)
-//    {
-//        cout << i->first << " " << i->second << endl;
-//    }
-//    for (map<string, int>::iterator i = fVocabulary.begin(); i != fVocabulary.end(); ++i)
-//    {
-//        cout << i->first << " " << i->second << endl;
-//    }
-//    cout << deltaTrans([eVocabulary["below"]][eVocabulary["the"]] << endl;
-    cout << bigramLM[eVocabulary["right"]][eVocabulary["small"]] << endl;
-    cout << bigramLM[eVocabulary["small"]][eVocabulary["circle"]] << endl;
-    return 1;
+    return 0;
 }
